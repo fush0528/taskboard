@@ -6,9 +6,9 @@
 // 【重要觀念 2：必要的導入】
 // next/image：Next.js 優化的圖片組件，提供自動圖片優化
 // useState：React 的狀態管理鉤子，用於管理組件內的狀態
-import Image from "next/image";
+import Link from "next/link";
 import styles from "./page.module.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Tasklist from "./components/TaskList";
 
 // 【重要觀念 3：函數組件】
@@ -23,6 +23,19 @@ export default function Home() {
   const [tasks, setTasks] = useState([]); // 初始值為空數組
   const [newTask, setNewTask] = useState('');
 
+  const [nextId, setnextiId] = useState(1);
+
+// 【重要觀念 4.1：useEffect 與本地存儲】
+// 使用 useEffect 在組件加載時從 localStorage 讀取保存的任務
+// 同時計算已存在任務的最大 ID，確保新任務的 ID 不會重複
+useEffect(() => {
+  const savedTasks = JSON.parse(localStorage.getItem('tasks')) || [];
+  setTasks(savedTasks);
+  const maxId = savedTasks.reduce((max, task) => Math.max(max, task.id), 0);
+  setnextiId(maxId + 1);
+}, []); // 空依賴數組表示僅在組件首次渲染時執行一次
+
+
   // 【重要觀念 5：事件處理函數】
   const addTask = () => {
     // 【除錯技巧】：使用 console.log 來追蹤狀態變化
@@ -31,19 +44,52 @@ export default function Home() {
     // 【重要觀念 6：狀態不可變性】
     // 常見錯誤：直接修改原數組 tasks.push(newTask)
     // 正確做法：創建新數組
-    const updatedTasks = [...tasks, newTask];
+    const newTaskObj = {
+      id: nextId,
+      title: newTask,
+      description: '',
+    };
+    
+    
+    const updatedTasks = [...tasks, newTaskObj];
+
+
     setTasks(updatedTasks);
     console.log("After", updatedTasks);
 
     // 重置輸入框
     setNewTask('');
+
+    setnextiId(nextId +1);
+    localStorage.setItem('tasks', JSON.stringify(updatedTasks))
   }
+
+
+  // 【重要觀念 6.1：任務刪除邏輯】
+  // 使用 filter 方法創建新的任務數組，排除要刪除的任務
+  // 更新狀態並同步到 localStorage
+  const handleDelete = (taskId) => {
+    const newTasks = tasks.filter(task => task.id !== taskId);
+    setTasks(newTasks);
+    localStorage.setItem('tasks', JSON.stringify(newTasks));
+  }
+
+
+
+
+
+
+
+
+
+
+
 
   // 【重要觀念 7：JSX 渲染】
   return (
     // 【重要觀念 8：CSS 類名】
     // 在 JSX 中使用 className 而不是 HTML 的 class
-    <main className="p-4">
+    <main className="p-4 max-w-md mx-auto">
       <h1 className="text-2x1 font-bold">Task Board</h1>
 
       {/* 【重要觀念 9：表單控制】 */}
@@ -75,7 +121,8 @@ export default function Home() {
 
       {/* 【重要觀念 10：組件組合】 */}
       {/* 將 tasks 作為 props 傳遞給子組件 */}
-      <Tasklist tasks={tasks} />
+      <Tasklist tasks={tasks} onDelete={handleDelete}/>
+     
     </main>
   );
 }
